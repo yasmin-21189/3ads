@@ -9,22 +9,41 @@ st.set_page_config(page_title="Painel de Atendimento Médico", layout="wide")
 
 @st.cache_data
 def carregar_dados():
-    df = pd.read_csv("planilha_pacientes.csv", sep=';', encoding='latin-1')
-    df.columns = df.columns.str.strip()
-    return df
+    try:
+        df = pd.read_csv("planilha_pacientes.csv", sep=';', encoding='latin-1')
+        df.columns = df.columns.str.strip()
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar dados: {e}")
+        return pd.DataFrame()
 
 df = carregar_dados()
 
 st.title("Painel de Atendimento Médico")
 
-media_idade = df["Idade"].mean()
-total_atestados = df[df["Atestado"] == 1].shape[0]
-total_respiratorio = df[df["SindRespiratoria"] == 1].shape[0]
+# Verificar se colunas importantes existem, senão avisar e evitar erro
+if "Idade" in df.columns:
+    media_idade = df["Idade"].mean()
+else:
+    st.warning("Coluna 'Idade' não encontrada no arquivo CSV.")
+    media_idade = 0
+
+if "Atestado" in df.columns:
+    total_atestados = df[df["Atestado"] == 1].shape[0]
+else:
+    st.warning("Coluna 'Atestado' não encontrada no arquivo CSV.")
+    total_atestados = 0
+
+if "SindRespiratoria" in df.columns:
+    total_respiratorio = df[df["SindRespiratoria"] == 1].shape[0]
+else:
+    st.warning("Coluna 'SindRespiratoria' não encontrada no arquivo CSV.")
+    total_respiratorio = 0
 
 st.markdown("### Resumo dos Atendimentos")
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric("Média de Idade", f"{media_idade:.1f} anos")
+    st.metric("Média de Idade", f"{media_idade:.1f} anos" if media_idade else "N/A")
 with col2:
     st.metric("Atestados Emitidos", total_atestados)
 with col3:
@@ -37,40 +56,52 @@ with st.container():
 
     with col_graf1:
         st.markdown("Atendimentos por Médico")
-        fig1, ax1 = plt.subplots(figsize=(3.5, 2.5))
-        sns.countplot(data=df, x="Medico", ax=ax1, palette="coolwarm")
-        ax1.set_xlabel("")
-        ax1.set_ylabel("Qtd")
-        plt.xticks(rotation=45)
-        st.pyplot(fig1)
+        if "Medico" in df.columns:
+            fig1, ax1 = plt.subplots(figsize=(3.5, 2.5))
+            sns.countplot(data=df, x="Medico", ax=ax1, palette="coolwarm")
+            ax1.set_xlabel("")
+            ax1.set_ylabel("Qtd")
+            plt.xticks(rotation=45)
+            st.pyplot(fig1)
+        else:
+            st.warning("Coluna 'Medico' não encontrada no arquivo CSV.")
 
     with col_graf2:
         st.markdown("Atendimentos por Turno")
-        fig2, ax2 = plt.subplots(figsize=(3.5, 2.5))
-        sns.countplot(data=df, x="Turno", order=df["Turno"].value_counts().index, ax=ax2, palette="viridis")
-        ax2.set_xlabel("")
-        ax2.set_ylabel("Qtd")
-        st.pyplot(fig2)
+        if "Turno" in df.columns:
+            fig2, ax2 = plt.subplots(figsize=(3.5, 2.5))
+            sns.countplot(data=df, x="Turno", order=df["Turno"].value_counts().index, ax=ax2, palette="viridis")
+            ax2.set_xlabel("")
+            ax2.set_ylabel("Qtd")
+            st.pyplot(fig2)
+        else:
+            st.warning("Coluna 'Turno' não encontrada no arquivo CSV.")
 
 with st.container():
     col_graf3, col_graf4 = st.columns(2)
 
     with col_graf3:
         st.markdown("Casos Respiratórios por Idade")
-        respiratorio_df = df[df["SindRespiratoria"] == 1]
-        fig3, ax3 = plt.subplots(figsize=(3.5, 2.5))
-        sns.histplot(respiratorio_df["Idade"], bins=10, kde=True, color="purple", ax=ax3)
-        ax3.set_xlabel("Idade")
-        ax3.set_ylabel("Casos")
-        st.pyplot(fig3)
+        if "SindRespiratoria" in df.columns and "Idade" in df.columns:
+            respiratorio_df = df[df["SindRespiratoria"] == 1]
+            fig3, ax3 = plt.subplots(figsize=(3.5, 2.5))
+            sns.histplot(respiratorio_df["Idade"], bins=10, kde=True, color="purple", ax=ax3)
+            ax3.set_xlabel("Idade")
+            ax3.set_ylabel("Casos")
+            st.pyplot(fig3)
+        else:
+            st.warning("Colunas 'SindRespiratoria' ou 'Idade' não encontradas no arquivo CSV.")
 
     with col_graf4:
         st.markdown("Distribuição por Gênero")
-        fig4, ax4 = plt.subplots(figsize=(3.5, 2.5))
-        sns.countplot(data=df, x="Genero", ax=ax4, palette="pastel")
-        ax4.set_xlabel("")
-        ax4.set_ylabel("Qtd")
-        st.pyplot(fig4)
+        if "Genero" in df.columns:
+            fig4, ax4 = plt.subplots(figsize=(3.5, 2.5))
+            sns.countplot(data=df, x="Genero", ax=ax4, palette="pastel")
+            ax4.set_xlabel("")
+            ax4.set_ylabel("Qtd")
+            st.pyplot(fig4)
+        else:
+            st.warning("Coluna 'Genero' não encontrada no arquivo CSV.")
 
 st.divider()
 
@@ -88,7 +119,11 @@ st.divider()
 st.markdown("## Análises Estatísticas (Distribuições)")
 
 st.markdown("### Probabilidade de Atestados (Distribuição Binomial)")
-p_atestado = df["Atestado"].mean()
+if "Atestado" in df.columns:
+    p_atestado = df["Atestado"].mean()
+else:
+    p_atestado = 0
+    st.warning("Coluna 'Atestado' não encontrada para análises estatísticas.")
 
 col_a, col_b = st.columns(2)
 with col_a:   
@@ -114,7 +149,11 @@ else:
 st.divider()
 
 st.markdown("## Casos Respiratórios por Turno (Distribuição de Poisson)")
-casos_por_turno = df.groupby("Turno")["SindRespiratoria"].sum().mean()
+if "Turno" in df.columns and "SindRespiratoria" in df.columns:
+    casos_por_turno = df.groupby("Turno")["SindRespiratoria"].sum().mean()
+else:
+    casos_por_turno = 0
+    st.warning("Colunas 'Turno' e/ou 'SindRespiratoria' não encontradas para análises estatísticas.")
 
 k_poisson = st.slider("Número de casos respiratórios desejados (ou mais)", min_value=0, max_value=10, value=3, step=1)
 prob_poisson = 1 - poisson.cdf(k_poisson - 1, casos_por_turno)
