@@ -9,7 +9,7 @@ st.set_page_config(page_title="Painel de Atendimento Médico", layout="wide")
 
 @st.cache_data
 def carregar_dados():
-    df = pd.read_csv("atendimento.csv", sep=';', encoding='latin-1')
+    df = pd.read_csv("planilha_pacientes.csv", sep=';', encoding='latin-1')
     df.columns = df.columns.str.strip()
     return df
 
